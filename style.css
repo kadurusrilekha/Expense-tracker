@@ -60,3 +60,9 @@ tfoot td{
     cursor:pointer;
 
 }
+#expenseChart {
+    width: 400px;   /* medium width */
+    height: 400px;  /* medium height to make it square */
+    margin: 0 auto; /* center the chart */
+    display: block;
+}

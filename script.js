@@ -1,57 +1,101 @@
 let expenses = [];
-let totalAmount = 0;
+let chart;
 
-const categorySelect = document.getElementById('category-select');
-const amountInput = document.getElementById('amount-input');
-const dateInput = document.getElementById('date-input');
-const addBtn = document.getElementById('add-btn');
-const expenseTableBody = document.getElementById('expense-table-body');
-const totalAmountCell = document.getElementById('total-amount');
+// Get all input elements
+const categorySelect = document.getElementById("category-select");
+const amountInput = document.getElementById("amount-input");
+const dateInput = document.getElementById("date-input");
 
-addBtn.addEventListener('click', function () {
+// Add button still adds expense to the list
+document.getElementById("add-btn").addEventListener("click", function () {
     const category = categorySelect.value;
-    const amount = Number(amountInput.value);
+    const amount = parseFloat(amountInput.value);
     const date = dateInput.value;
 
-    if (category === '') {
-        alert('Please select a category');
-        return;
-    }
-    if (isNaN(amount) || amount <= 0) {
-        alert('Please enter a valid amount');
-        return;
-    }
-    if (date === '') {
-        alert('Please select a date');
+    if (!category || !amount || !date || amount <= 0) {
+        alert("Please enter valid details.");
         return;
     }
 
-    const expense = { category, amount, date };
-    expenses.push(expense);
-    totalAmount += amount;
-    totalAmountCell.textContent = totalAmount;
+    addExpense(amount, category, date);
 
-    const newRow = expenseTableBody.insertRow();
+    // Clear inputs
+    amountInput.value = "";
+    dateInput.value = "";
+});
 
-    const categoryCell = newRow.insertCell();
-    const amountCell = newRow.insertCell();
-    const dateCell = newRow.insertCell();
-    const deleteCell = newRow.insertCell();
+// Live preview: chart updates as user types/selects
+amountInput.addEventListener("input", liveUpdateChart);
+categorySelect.addEventListener("change", liveUpdateChart);
 
-    categoryCell.textContent = expense.category;
-    amountCell.textContent = expense.amount;
-    dateCell.textContent = expense.date;
+function liveUpdateChart() {
+    const category = categorySelect.value;
+    const amount = parseFloat(amountInput.value);
 
-    const deleteBtn = document.createElement('button');
-    deleteBtn.textContent = 'Delete';
-    deleteBtn.classList.add('delete-btn');
+    if (!category || isNaN(amount) || amount <= 0) return;
 
-    deleteBtn.addEventListener('click', function () {
-        expenses.splice(expenses.indexOf(expense), 1);
-        totalAmount -= expense.amount;
-        totalAmountCell.textContent = totalAmount;
-        expenseTableBody.removeChild(newRow);
+    // Create a temporary array for live preview
+    const tempExpenses = [...expenses, { category, amount, date: dateInput.value || "N/A" }];
+
+    updateChart(tempExpenses);
+}
+
+function addExpense(amount, category, date) {
+    expenses.push({ amount, category, date });
+    updateTable();
+    updateChart(expenses);
+}
+
+function deleteExpense(index) {
+    expenses.splice(index, 1);
+    updateTable();
+    updateChart(expenses);
+}
+
+function updateTable() {
+    const tableBody = document.getElementById("expense-table-body");
+    tableBody.innerHTML = "";
+
+    let total = 0;
+    expenses.forEach((exp, index) => {
+        total += exp.amount;
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td>${exp.category}</td>
+            <td>${exp.amount.toFixed(2)}</td>
+            <td>${exp.date}</td>
+            <td><button onclick="deleteExpense(${index})" class="delete-btn">Delete</button></td>
+        `;
+        tableBody.appendChild(row);
     });
 
-    deleteCell.appendChild(deleteBtn);
-});
+    document.getElementById("total-amount").textContent = total.toFixed(2);
+}
+
+function updateChart(data) {
+    const categoryTotals = {};
+    data.forEach(exp => {
+        categoryTotals[exp.category] = (categoryTotals[exp.category] || 0) + exp.amount;
+    });
+
+    const ctx = document.getElementById('expenseChart').getContext('2d');
+
+    if (chart) chart.destroy();
+
+    chart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: Object.keys(categoryTotals),
+            datasets: [{
+                data: Object.values(categoryTotals),
+                backgroundColor: [
+                    '#FF6384', '#36A2EB', '#FFCE56',
+                    '#4BC0C0', '#9966FF', '#FF9F40'
+                ]
+            }]
+        },
+        options: {
+            responsive: true
+        }
+    });
+}
